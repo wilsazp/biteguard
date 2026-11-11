@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BiteGuard — working prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F5F3; --surface:#FFFFFF; --surface-2:#E7EEEA; --ink:#13201D; --ink-soft:#4F5F5A;
+  --line:#D3DDD8; --calm:#0F5C52; --calm-2:#1F7A6D; --calm-tint:#DCEDE8;
+  --signal:#E0503A; --signal-tint:#FBE3DE; --gold:#B7862A;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1513; --surface:#15211E; --surface-2:#1C2B27; --ink:#E6EFEB; --ink-soft:#A3B5AF;
+    --line:#2A3B37; --calm:#4FC2AE; --calm-2:#6FD6C3; --calm-tint:#173A33;
+    --signal:#FF7A63; --signal-tint:#3D1E18; --gold:#E2B458; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1513; --surface:#15211E; --surface-2:#1C2B27; --ink:#E6EFEB; --ink-soft:#A3B5AF;
+  --line:#2A3B37; --calm:#4FC2AE; --calm-2:#6FD6C3; --calm-tint:#173A33;
+  --signal:#FF7A63; --signal-tint:#3D1E18; --gold:#E2B458; color-scheme: dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--calm-2);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.1}
+
+/* ---------- page layout ---------- */
+.page{max-width:1180px;margin:0 auto;padding:28px 20px 40px;display:grid;grid-template-columns:400px 1fr;gap:40px;align-items:start}
+.intro{grid-column:1/-1;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;border-radius:50%;background:var(--calm);display:grid;place-items:center}
+.brand-mark svg{width:24px;height:24px}
+.brand h1{font-size:28px;font-weight:800;letter-spacing:-.01em}
+.brand p{margin:2px 0 0;color:var(--ink-soft);font-size:14.5px}
+.honesty{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:13px;border-radius:999px;padding:5px 11px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft)}
+.chip b{color:var(--ink)}
+.chip.sim{border-color:var(--gold);color:var(--ink)}
+.chip.sim::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:6px;vertical-align:1px}
+.chip.real::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--calm);margin-right:6px;vertical-align:1px}
+
+/* ---------- phone ---------- */
+.phone{width:400px;height:820px;border-radius:44px;background:var(--surface);border:1px solid var(--line);box-shadow:0 30px 60px -30px rgba(15,60,52,.35);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.notch{height:34px;display:flex;justify-content:center;align-items:center;flex:none}
+.notch span{width:110px;height:26px;border-radius:20px;background:var(--ink);opacity:.9}
+.screen{flex:1;overflow-y:auto;padding:6px 22px 18px;position:relative}
+.screen[hidden]{display:none}
+.tabbar{flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);background:var(--surface)}
+.tabbar button{background:none;border:0;padding:12px 0 14px;font-size:13px;color:var(--ink-soft);display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar button[aria-current="page"]{color:var(--calm);font-weight:700}
+.tabbar svg{width:22px;height:22px}
+.tabbar[hidden]{display:none}
+
+.kicker{font-size:14px;color:var(--ink-soft);margin:6px 0 2px}
+.h-screen{font-size:30px;font-weight:800;letter-spacing:-.015em}
+.sub{color:var(--ink-soft);font-size:14.5px;margin:4px 0 0}
+.btn{display:block;width:100%;border:0;border-radius:16px;padding:15px 18px;font-weight:700;font-size:16.5px;text-align:center}
+.btn.primary{background:var(--calm);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#06201B}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#06201B}}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.btn.signal{background:var(--signal);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.stack>*+*{margin-top:12px}
+
+/* pairing */
+.pair-hero{margin:26px 0 22px;display:grid;place-items:center;height:250px;position:relative}
+.ring{position:absolute;border-radius:50%;border:2px solid var(--calm);opacity:0}
+.scanning .ring{animation:ping 2.2s ease-out infinite}
+.scanning .ring:nth-child(2){animation-delay:.7s}
+.scanning .ring:nth-child(3){animation-delay:1.4s}
+@keyframes ping{0%{width:70px;height:70px;opacity:.7}100%{width:250px;height:250px;opacity:0}}
+.band{width:92px;height:118px;border-radius:30px;background:var(--ink);display:grid;place-items:center;position:relative;z-index:1}
+.band i{width:52px;height:52px;border-radius:14px;background:var(--calm);display:block;transition:background .3s}
+.connected .band i{background:var(--calm-2)}
+.device-row{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:var(--paper)}
+.device-row small{display:block;color:var(--ink-soft);font-size:13px}
+.ok{color:var(--calm);font-weight:700;font-size:14px}
+
+/* home */
+.dial{position:relative;width:220px;height:220px;margin:18px auto 6px}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial .num{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.dial .num b{font-family:var(--display);font-size:46px;font-weight:800;display:block;line-height:1}
+.dial .num span{font-size:14px;color:var(--ink-soft)}
+.macros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.macros div{background:var(--surface-2);border-radius:14px;padding:10px;text-align:center}
+.macros b{display:block;font-size:17px}
+.macros span{font-size:12.5px;color:var(--ink-soft)}
+.list{border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.list .row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--line);font-size:15px}
+.list .row:first-child{border-top:0}
+.list .row small{color:var(--ink-soft);font-size:13px;display:block}
+.tag{font-size:12px;border-radius:999px;padding:3px 9px;font-weight:700}
+.tag.calm{background:var(--calm-tint);color:var(--calm)}
+.tag.alert{background:var(--signal-tint);color:var(--signal)}
+.section-t{font-family:var(--display);font-weight:700;font-size:17px;margin:20px 0 8px}
+
+/* live meal */
+.live-top{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.rec{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--calm)}
+.rec i{width:10px;height:10px;border-radius:50%;background:var(--calm);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.gauge{border-radius:18px;padding:14px;background:var(--surface-2)}
+.gauge b{font-family:var(--display);font-size:38px;font-weight:800;display:block;line-height:1.05}
+.gauge span{font-size:13px;color:var(--ink-soft)}
+.gauge.hot{background:var(--signal-tint)}
+.gauge.hot b{color:var(--signal)}
+canvas{width:100%;height:170px;display:block;border-radius:16px;background:var(--paper);border:1px solid var(--line)}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--ink-soft);margin:6px 2px 0}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.threshold-note{font-size:13.5px;color:var(--ink-soft);margin:12px 0}
+
+/* alert overlay */
+.overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--ink) 55%,transparent);display:flex;align-items:flex-end;z-index:5}
+.overlay[hidden]{display:none}
+.sheet{background:var(--surface);width:100%;border-radius:28px 28px 0 0;padding:26px 22px 24px;animation:up .35s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.buzz{width:70px;height:70px;border-radius:50%;background:var(--signal-tint);display:grid;place-items:center;margin-bottom:14px;animation:buzz .12s linear 8}
+.buzz svg{width:34px;height:34px}
+@keyframes buzz{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.sheet h2{font-size:26px;font-weight:800}
+.sheet p{color:var(--ink-soft);margin:8px 0 18px}
+.why{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:13.5px;margin-bottom:16px}
+
+/* log meal */
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--paper);margin:12px 0}
+.search input{border:0;background:none;outline:none;font:inherit;color:var(--ink);flex:1;min-width:0}
+.food{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid var(--line)}
+.food small{display:block;color:var(--ink-soft);font-size:13px}
+.add{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--calm);background:none;color:var(--calm);font-size:20px;line-height:1;font-weight:700}
+.add.on{background:var(--calm);color:var(--surface)}
+.cart{position:sticky;bottom:0;background:var(--surface);padding-top:12px}
+.empty{color:var(--ink-soft);font-size:14.5px;padding:14px 2px}
+
+/* done */
+.done-mark{width:84px;height:84px;border-radius:50%;background:var(--calm-tint);display:grid;place-items:center;margin:40px auto 18px}
+.done-mark svg{width:42px;height:42px}
+.center{text-align:center}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:22px 0}
+.summary div{border:1px solid var(--line);border-radius:14px;padding:12px 6px;text-align:center}
+.summary b{font-family:var(--display);font-size:22px;display:block}
+.summary span{font-size:12px;color:var(--ink-soft)}
+
+/* insights */
+.big-stat{display:flex;align-items:baseline;gap:10px;margin:14px 0 4px}
+.big-stat b{font-family:var(--display);font-size:56px;font-weight:800;color:var(--calm);line-height:1}
+.bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding:10px 4px 0;border-bottom:1px solid var(--line)}
+.bars .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%}
+.bars .stack{width:100%;display:flex;flex-direction:column-reverse;border-radius:8px 8px 0 0;overflow:hidden}
+.bars .stack i{display:block;width:100%}
+.bars .lbl{font-size:12px;color:var(--ink-soft)}
+.bars-x{display:flex;gap:10px;padding:4px 4px 0}
+.bars-x span{flex:1;text-align:center;font-size:12px;color:var(--ink-soft)}
+.insight-card{background:var(--surface-2);border-radius:16px;padding:14px 16px;font-size:14.5px;margin-top:14px}
+
+/* settings */
+.setting{border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}
+.setting label{font-weight:700;display:flex;justify-content:space-between}
+.setting small{display:block;color:var(--ink-soft);font-size:13px;margin-top:2px}
+input[type=range]{width:100%;margin-top:12px;accent-color:var(--calm)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.seg button{border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:9px 4px;font-size:13.5px}
+.seg button[aria-pressed="true"]{background:var(--calm);border-color:var(--calm);color:var(--surface);font-weight:700}
+
+/* ---------- side panel ---------- */
+.side h2{font-size:24px;font-weight:800;margin-bottom:6px}
+.side>p{color:var(--ink-soft);margin:0 0 18px;max-width:62ch}
+.steps{list-style:none;padding:0;margin:0 0 26px;display:grid;gap:8px}
+.steps li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft)}
+.steps li b{color:var(--ink);font-weight:700}
+.steps li .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--surface-2);color:var(--ink-soft);font-family:var(--display)}
+.steps li.now{border-color:var(--calm);box-shadow:0 0 0 1px var(--calm)}
+.steps li.now .n{background:var(--calm);color:var(--surface)}
+.steps li.done .n{background:var(--calm-tint);color:var(--calm)}
+.datalog h3{font-size:18px;font-weight:700;margin-bottom:4px}
+.datalog>p{font-size:14px;color:var(--ink-soft);margin:0 0 10px;max-width:62ch}
+.log{background:#0E1A17;color:#CFE3DC;border-radius:16px;padding:14px 16px;height:300px;overflow-y:auto;font-family:"DejaVu Sans Mono",Consolas,Menlo,monospace;font-size:12.5px;line-height:1.55}
+.log .t{color:#7FA89D}
+.log .kw{color:#6FD6C3}
+.log .tb{color:#FFD08A}
+.log .sim{color:#E2B458}
+.log div{padding:3px 0;border-bottom:1px dashed #22332F;white-space:pre-wrap;word-break:break-word}
+.log .empty-log{color:#7FA89D;border:0}
+.status-table{width:100%;border-collapse:collapse;margin-top:22px;font-size:14px}
+.status-table th,.status-table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+.status-table th{font-family:var(--display);font-weight:700}
+.st-done{color:var(--calm);font-weight:700}
+.st-part{color:var(--gold);font-weight:700}
+.st-plan{color:var(--ink-soft);font-weight:700}
+.table-wrap{overflow-x:auto}
+.restart{background:none;border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin-top:12px;font-size:14px}
+.theme-toggle{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px}
+
+/* ---------- mobile ---------- */
+.mobile-data{display:none}
+@media (max-width: 900px){
+  .page{grid-template-columns:1fr;padding:0;gap:0}
+  .intro{padding:14px 18px 10px}
+  .honesty{display:none}
+  .phone{width:100%;height:calc(100dvh - 76px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:600px;border-radius:0;border:0;box-shadow:none}
+  .notch{display:none}
+  .side{padding:22px 18px 30px;border-top:1px solid var(--line)}
+  .mobile-data{display:inline-block}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- study mode ---------- */
+.study-bar{display:none}
+body.study .study-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--calm-tint);border:1px solid var(--calm);border-radius:14px;padding:10px 14px;font-size:15px;max-width:620px}
+body.study .study-bar b{color:var(--calm)}
+body.study .honesty,body.study .side{display:none}
+body.study .page{grid-template-columns:400px;justify-content:center}
+.stuck{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px}
+.smodal{position:fixed;inset:0;background:var(--paper);z-index:60;overflow-y:auto;padding:calc(24px + env(safe-area-inset-top,0px)) 18px calc(30px + env(safe-area-inset-bottom,0px))}
+.smodal[hidden]{display:none}
+.smodal .box{max-width:620px;margin:0 auto}
+.smodal h2{font-size:28px;font-weight:800;margin:6px 0 10px}
+.smodal p{margin:0 0 12px;color:var(--ink-soft)}
+.smodal .task{background:var(--calm-tint);border-radius:16px;padding:16px 18px;color:var(--ink);font-size:17px;margin:14px 0}
+.q{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:14px 16px;margin:12px 0}
+.q legend,.q .ql{font-weight:700;margin-bottom:10px;display:block;padding:0}
+.q fieldset{border:0;margin:0;padding:0}
+.lik{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.lik label{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;color:var(--ink-soft);border:1px solid var(--line);border-radius:12px;padding:8px 2px;cursor:pointer;text-align:center}
+.lik input{accent-color:var(--calm);width:20px;height:20px;margin:0}
+.lik label:has(input:checked){border-color:var(--calm);background:var(--calm-tint);color:var(--ink)}
+.ends{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-top:6px}
+.mc label{display:flex;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer}
+.mc label:last-child{border-bottom:0}
+.mc input{accent-color:var(--calm);width:20px;height:20px}
+.q textarea,.q select{width:100%;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px}
+.code{font-family:"DejaVu Sans Mono",Consolas,monospace;font-size:13px;word-break:break-all;background:var(--surface);border:2px dashed var(--calm);border-radius:14px;padding:14px;margin:12px 0;color:var(--ink);user-select:all}
+.err{color:var(--signal);font-weight:700;font-size:14px;min-height:20px}
+@media (max-width:900px){ body.study .phone{height:calc(100dvh - 150px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))} body.study .page{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>
+      </div>
+      <div>
+        <h1>BiteGuard</h1>
+        <p>Working prototype · main scenario in 6 steps</p>
+      </div>
+    </div>
+    <div class="honesty" aria-label="What is real and what is simulated">
+      <span class="chip real"><b>Working:</b> app flow, calculations, settings</span>
+      <span class="chip sim"><b>Simulated:</b> bracelet, sensors, database writes</span>
+      <button class="theme-toggle" id="themeBtn" type="button">Dark mode</button>
+    </div>
+    <div class="study-bar" id="studyBar"><span><b>Your task:</b> connect the band, start dinner, react to the band, and save a dinner of <b>grilled salmon + brown rice</b>.</span><button class="stuck" id="stuckBtn" type="button">I’m stuck</button></div>
+  </header>
+
+  <!-- ================= PHONE ================= -->
+  <main class="phone" aria-label="BiteGuard app">
+    <div class="notch" aria-hidden="true"><span></span></div>
+
+    <!-- 1. Pair -->
+    <section class="screen" id="s-pair">
+      <p class="kicker">Step 1 of 6</p>
+      <h2 class="h-screen">Pair your bracelet</h2>
+      <p class="sub">Keep the band close to your phone. BiteGuard connects over Bluetooth Low Energy.</p>
+      <div class="pair-hero" id="pairHero">
+        <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+        <div class="band"><i></i></div>
+      </div>
+      <div id="pairResult" class="stack"></div>
+      <div class="stack" style="margin-top:16px">
+        <button class="btn primary" id="pairBtn" type="button">Search for my band</button>
+      </div>
+    </section>
+
+    <!-- 2. Home -->
+    <section class="screen" id="s-home" hidden>
+      <p class="kicker">Good evening</p>
+      <h2 class="h-screen">Isatay</h2>
+      <p class="sub" id="bandLine">Band BG-26A-000184 · connected · 92% battery</p>
+      <div class="dial" aria-label="Calories eaten today">
+        <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--surface-2)" stroke-width="11"/>
+          <circle id="dialArc" cx="60" cy="60" r="50" fill="none" stroke="var(--calm)" stroke-width="11" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" style="transition:stroke-dashoffset .8s ease"/></svg>
+        <div class="num"><div><b id="kcalNow">0</b><span id="kcalGoal">of 2,200 kcal</span></div></div>
+      </div>
+      <div class="macros"><div><b id="mP">0 g</b><span>Protein</span></div><div><b id="mC">0 g</b><span>Carbs</span></div><div><b id="mF">0 g</b><span>Fat</span></div></div>
+      <h3 class="section-t">Today’s meals</h3>
+      <div class="list" id="mealList"></div>
+      <div class="stack" style="margin-top:16px">
+        <button class="btn primary" id="startMealBtn" type="button">Start dinner</button>
+      </div>
+    </section>
+
+    <!-- 3. Live meal -->
+    <section class="screen" id="s-live" hidden>
+      <p class="kicker">Step 3 of 6</p>
+      <div class="live-top"><h2 class="h-screen">Dinner</h2><span class="rec"><i></i><span id="liveClock">0:00</span></span></div>
+      <p class="sub">The band is reading your wrist movement and pulse. Eat as you normally would.</p>
+      <div class="gauges">
+        <div class="gauge" id="gPace"><b id="paceVal">0</b><span>bites per minute</span></div>
+        <div class="gauge" id="gHr"><b id="hrVal">—</b><span>heart rate, bpm</span></div>
+      </div>
+      <canvas id="chart" width="712" height="340" aria-label="Live chart of eating pace and heart rate"></canvas>
+      <div class="legend"><span><i style="background:var(--signal)"></i>Bites/min (2-min average)</span><span><i style="background:var(--calm)"></i>Heart rate</span><span><i style="background:var(--gold)"></i>Your alert threshold</span></div>
+      <p class="threshold-note" id="thrNote"></p>
+      <button class="btn ghost" id="endMealBtn" type="button">End meal without alert</button>
+
+      <div class="overlay" id="alertOv" hidden role="dialog" aria-modal="true" aria-labelledby="alertTitle">
+        <div class="sheet">
+          <div class="buzz" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="var(--signal)" stroke-width="2.2" stroke-linecap="round"><rect x="7" y="4" width="10" height="16" rx="3"/><path d="M3 9v6M21 9v6"/></svg></div>
+          <h2 id="alertTitle">Slow down for a moment</h2>
+          <p id="alertText">Your band just vibrated. You’re eating faster than your usual pace — put the fork down for a breath.</p>
+          <div class="why" id="alertWhy"></div>
+          <div class="stack">
+            <button class="btn primary" id="logFromAlert" type="button">Log this meal</button>
+            <button class="btn ghost" id="dismissAlert" type="button">Dismiss and keep eating</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Log -->
+    <section class="screen" id="s-log" hidden>
+      <p class="kicker">Step 5 of 6</p>
+      <h2 class="h-screen">What’s on your plate?</h2>
+      <p class="sub">Tap the foods you ate. Search works on the same food list as the database.</p>
+      <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="foodSearch" type="search" placeholder="Search foods" aria-label="Search foods" autocomplete="off"></label>
+      <div id="foodList"></div>
+      <div class="cart"><button class="btn primary" id="saveMealBtn" type="button" disabled>Save meal</button></div>
+    </section>
+
+    <!-- 5. Done -->
+    <section class="screen" id="s-done" hidden>
+      <div class="done-mark"><svg viewBox="0 0 24 24" fill="none" stroke="var(--calm)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+      <p class="kicker center">Step 6 of 6</p>
+      <h2 class="h-screen center">Meal saved</h2>
+      <p class="sub center" id="doneLine"></p>
+      <div class="summary" id="doneSummary"></div>
+      <div class="stack">
+        <button class="btn primary" id="toInsights" type="button">See this week’s insights</button>
+        <button class="btn ghost" id="toHome" type="button">Back to today</button>
+      </div>
+    </section>
+
+    <!-- Insights -->
+    <section class="screen" id="s-insights" hidden>
+      <p class="kicker">This week · 19–25 Oct</p>
+      <h2 class="h-screen">Insights</h2>
+      <div class="big-stat"><b id="mindfulPct">0%</b><span>mindful meals</span></div>
+      <p class="sub" id="mindfulLine"></p>
+      <h3 class="section-t">Meals by day</h3>
+      <div class="bars" id="bars"></div>
+      <div class="bars-x" id="barsX"></div>
+      <div class="legend"><span><i style="background:var(--calm)"></i>Mindful</span><span><i style="background:var(--signal)"></i>With alert</span></div>
+      <div class="insight-card" id="insightText"></div>
+    </section>
+
+    <!-- Settings -->
+    <section class="screen" id="s-settings" hidden>
+      <p class="kicker">Band BG-26A-000184</p>
+      <h2 class="h-screen">Device settings</h2>
+      <div class="setting">
+        <label for="sens">Sensor sensitivity <span id="sensVal">3</span></label>
+        <small>Higher = the band alerts at a slower pace.</small>
+        <input type="range" id="sens" min="1" max="5" step="1" value="3">
+      </div>
+      <div class="setting">
+        <label for="vibe">Vibration strength <span id="vibeVal">6</span></label>
+        <small>How strongly the band vibrates.</small>
+        <input type="range" id="vibe" min="1" max="10" step="1" value="6">
+      </div>
+      <div class="setting">
+        <label>Vibration pattern</label>
+        <div class="seg" id="pattern">
+          <button type="button" data-p="gentle_pulse" aria-pressed="true">Gentle pulse</button>
+          <button type="button" data-p="double_tap" aria-pressed="false">Double tap</button>
+          <button type="button" data-p="long_buzz" aria-pressed="false">Long buzz</button>
+        </div>
+      </div>
+      <div class="stack" style="margin-top:16px">
+        <button class="btn ghost" id="testVibe" type="button">Test vibration</button>
+        <button class="btn primary" id="saveSettings" type="button">Save settings</button>
+      </div>
+    </section>
+
+    <nav class="tabbar" id="tabbar" hidden aria-label="Main">
+      <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Today</button>
+      <button type="button" data-tab="insights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19V11M12 19V5M19 19v-6"/></svg>Insights</button>
+      <button type="button" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</button>
+    </nav>
+  </main>
+
+  <!-- ================= SIDE PANEL ================= -->
+  <aside class="side">
+    <h2>Try the main scenario</h2>
+    <p>BiteGuard watches how fast you eat and gives your wrist a gentle buzz before you overeat — no calorie counting needed. Follow the six steps on the phone; nothing here needs an account.</p>
+    <ol class="steps" id="steps">
+      <li data-s="1"><span class="n">1</span><span><b>Pair the bracelet</b> over Bluetooth</span></li>
+      <li data-s="2"><span class="n">2</span><span><b>Check today</b> — calories and meals</span></li>
+      <li data-s="3"><span class="n">3</span><span><b>Start dinner</b> and watch the live sensors</span></li>
+      <li data-s="4"><span class="n">4</span><span><b>Feel the alert</b> when your pace gets too fast</span></li>
+      <li data-s="5"><span class="n">5</span><span><b>Log the meal</b> in a few taps</span></li>
+      <li data-s="6"><span class="n">6</span><span><b>See the result</b> in today’s total and weekly insights</span></li>
+    </ol>
+
+    <div class="datalog">
+      <h3>Where the data goes</h3>
+      <p>Each action below shows the row it would write to the BiteGuard PostgreSQL database from Assignment 3 (tables <code>meals</code>, <code>sensor_readings</code>, <code>alerts</code>, <code>meal_items</code>, <code>device_settings</code>, <code>device_events</code>). In this prototype the writes are <b>shown, not sent</b>: the bracelet and its sensor stream are simulated in your browser.</p>
+      <div class="log" id="log" aria-live="polite"><div class="empty-log">Waiting for the first action…</div></div>
+      <button class="restart" id="restart" type="button">Restart the scenario</button>
+    </div>
+
+    <div class="table-wrap">
+    <table class="status-table" aria-label="Function status">
+      <thead><tr><th>Function</th><th>Status in this prototype</th></tr></thead>
+      <tbody>
+        <tr><td>Pair bracelet (BLE)</td><td class="st-part">Partly — UI works, connection simulated</td></tr>
+        <tr><td>Live pace + heart-rate view</td><td class="st-part">Partly — UI works, sensor data simulated</td></tr>
+        <tr><td>Overeating alert with vibration</td><td class="st-done">Done — threshold logic runs; phone vibrates where supported</td></tr>
+        <tr><td>Log meal from food list</td><td class="st-done">Done — search, kcal and macro totals calculated</td></tr>
+        <tr><td>Daily ring + weekly insights</td><td class="st-done">Done — computed from the sample data</td></tr>
+        <tr><td>Sensitivity / vibration settings</td><td class="st-done">Done — change the live alert threshold</td></tr>
+        <tr><td>Saving to cloud database</td><td class="st-part">Partly — schema built (A3); writes shown, not sent</td></tr>
+        <tr><td>Physical bracelet hardware</td><td class="st-plan">Planned</td></tr>
+        <tr><td>Machine-learning pattern model</td><td class="st-plan">Planned</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </aside>
+</div>
+
+
+<!-- ================= STUDY MODE (#study) ================= -->
+<div class="smodal" id="mConsent" hidden role="dialog" aria-modal="true" aria-labelledby="mcT"><div class="box">
+  <p>BiteGuard · usability study · about 5 minutes</p>
+  <h2 id="mcT">Help us test a student prototype</h2>
+  <p>You will try one short task in the BiteGuard app and then answer 14 quick questions. We record only how the task went and your answers — <b>no name, no email, no location</b>. At the end you get a short code; send it to the student who gave you the link. You can stop at any time.</p>
+  <div class="q"><label class="ql" for="age">Your age group</label>
+    <select id="age"><option value="">Choose…</option><option>under 18</option><option>18–24</option><option>25–34</option><option>35+</option></select></div>
+  <div class="q"><label class="ql" for="exp">Do you use a fitness or food-tracking app?</label>
+    <select id="exp"><option value="">Choose…</option><option value="never">Never</option><option value="past">Used one in the past</option><option value="now">Yes, I use one now</option></select></div>
+  <p class="err" id="cErr"></p>
+  <div class="stack"><button class="btn primary" id="consentYes" type="button">I agree — start</button><button class="btn ghost" id="consentNo" type="button">No, thanks</button></div>
+</div></div>
+
+<div class="smodal" id="mTask" hidden role="dialog" aria-modal="true" aria-labelledby="mtT"><div class="box">
+  <h2 id="mtT">Your task</h2>
+  <p>Imagine you are Isatay, 23, a former boxer. Since an injury ended your training, you eat fast and too much when you are stressed. You have just bought a BiteGuard band.</p>
+  <div class="task"><b>Connect your band, start dinner, react when the band vibrates, and save a dinner of grilled salmon and brown rice.</b></div>
+  <p>Please don’t hurry and think aloud if someone is with you. There are no wrong answers — we are testing the app, not you. If you really can’t continue, press “I’m stuck”.</p>
+  <button class="btn primary" id="taskGo" type="button">Start the task</button>
+</div></div>
+
+<div class="smodal" id="mQ" hidden role="dialog" aria-modal="true" aria-labelledby="mqT"><div class="box">
+  <h2 id="mqT">Thank you! Now 14 quick questions</h2>
+  <p>1 = strongly disagree, 5 = strongly agree.</p>
+  <div id="qList"></div>
+  <div class="q"><label class="ql" for="cmt">What was confusing, or what would you improve? (optional — please no names or personal details)</label>
+    <textarea id="cmt" rows="3" maxlength="300"></textarea></div>
+  <p class="err" id="qErr"></p>
+  <button class="btn primary" id="qDone" type="button">Finish and get my code</button>
+</div></div>
+
+<div class="smodal" id="mCode" hidden role="dialog" aria-modal="true" aria-labelledby="mdT"><div class="box">
+  <h2 id="mdT">Done — thank you!</h2>
+  <p>Please send this code to the student who gave you the link (copy it into a chat message). It contains only your task results and answers.</p>
+  <div class="code" id="codeBox"></div>
+  <div class="stack"><button class="btn primary" id="copyCode" type="button">Copy code</button></div>
+</div></div>
+<script>
+(function(){
+  // ---------- sample data (same rows as the Assignment 3 database, user 1) ----------
+  const FOODS = [
+    {id:1,name:"Oatmeal",serv:"1 cup",kcal:150,p:5,c:27,f:3},
+    {id:2,name:"Chicken breast",serv:"100 g",kcal:165,p:31,c:0,f:3.6},
+    {id:3,name:"Brown rice",serv:"1 cup",kcal:216,p:5,c:45,f:1.8},
+    {id:4,name:"Avocado",serv:"½ medium",kcal:112,p:1.4,c:6,f:10.5},
+    {id:5,name:"Greek yogurt",serv:"170 g",kcal:100,p:17,c:6,f:0.7},
+    {id:6,name:"Grilled salmon",serv:"120 g",kcal:206,p:26,c:0,f:11},
+    {id:7,name:"Mixed salad greens",serv:"1 bowl",kcal:20,p:1.5,c:3.5,f:0.2},
+    {id:8,name:"Almonds",serv:"20 g",kcal:116,p:4.2,c:4.3,f:10},
+    {id:9,name:"Banana",serv:"1 medium",kcal:105,p:1.3,c:27,f:0.4},
+    {id:10,name:"Boiled eggs",serv:"2 eggs",kcal:140,p:12.6,c:1,f:9.5}
+  ];
+  const GOAL = 2200;
+  const today = [
+    {id:1,type:"Breakfast",time:"08:05–08:22",items:[[1,1],[9,1],[5,1]],alert:false},
+    {id:2,type:"Lunch",time:"13:10–13:24",items:[[2,2],[3,2],[4,1],[7,1]],alert:true}
+  ];
+  // week: [mindful, withAlert] per day Mon..Sun (Mon–Tue from the A3 data for user 1, Wed = today)
+  const week = {Mon:[0,0],Tue:[0,1],Wed:[1,1],Thu:[0,0],Fri:[0,0],Sat:[0,0],Sun:[0,0]};
+  const settings = {sens:3, vibe:6, pattern:"gentle_pulse"};
+  // v3 (end-term): limits lowered and applied to a 2-minute moving average, chosen from the simulation study
+  const THR = {1:10,2:9,3:8,4:7,5:6};   // 2-min average bites/min that trigger an alert, by sensitivity
+  let step = 1, nextMealId = 14, nextAlertId = 11, dinner = null, timer = null, cart = new Map();
+
+  const $ = id => document.getElementById(id);
+  const fmt = n => n.toLocaleString("en-US");
+
+  // ---------- data log ----------
+  function stamp(){ const d=new Date(); return d.toTimeString().slice(0,8); }
+  function log(table, sql, note){
+    const box = $("log"); const e = box.querySelector(".empty-log"); if(e) e.remove();
+    const div = document.createElement("div");
+    div.innerHTML = `<span class="t">${stamp()}</span> <span class="kw">${sql.split(" ")[0]}</span> <span class="tb">${table}</span> ${sql.slice(sql.indexOf(" ")+1).replace(table,"").trim()}${note?` <span class="sim">· ${note}</span>`:""}`;
+    box.appendChild(div); box.scrollTop = box.scrollHeight;
+  }
+
+  // ---------- navigation ----------
+  const screens = ["pair","home","live","log","done","insights","settings"];
+  function show(name){
+    screens.forEach(s => $("s-"+s).hidden = (s!==name));
+    $("tabbar").hidden = !["home","insights","settings"].includes(name);
+    document.querySelectorAll("#tabbar button").forEach(b => b.setAttribute("aria-current", b.dataset.tab===name?"page":"false"));
+    const sc = $("s-"+name); sc.scrollTop = 0;
+    if(name==="home") renderHome();
+    if(name==="insights") renderInsights();
+  }
+  function setStep(n){
+    step = n;
+    document.querySelectorAll("#steps li").forEach(li => {
+      const s = +li.dataset.s; li.classList.toggle("now", s===n); li.classList.toggle("done", s<n);
+    });
+  }
+  document.querySelectorAll("#tabbar button").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
+
+  // ---------- 1. pair ----------
+  $("pairBtn").addEventListener("click", () => {
+    const btn = $("pairBtn");
+    if(btn.dataset.state==="found"){ setStep(2); show("home"); return; }
+    btn.disabled = true; btn.textContent = "Searching…";
+    $("pairHero").classList.add("scanning");
+    log("device_events","INSERT device_events (event_type='ble_scan_started')","simulated");
+    setTimeout(() => {
+      $("pairHero").classList.remove("scanning"); $("pairHero").classList.add("connected");
+      $("pairResult").innerHTML = `<div class="device-row"><div><b>BiteGuard Band v1</b><small>BG-26A-000184 · firmware 1.3.2 · 92% battery</small></div><span class="ok">Connected</span></div>`;
+      btn.disabled = false; btn.textContent = "Continue"; btn.dataset.state = "found";
+      log("device_events","INSERT device_events (device_id=1, event_type='paired', battery_pct=92)","simulated");
+      log("devices","UPDATE devices SET last_sync_at=now() WHERE device_id=1","simulated");
+    }, 2200);
+  });
+
+  // ---------- 2. home ----------
+  function totals(){
+    let k=0,p=0,c=0,f=0;
+    today.forEach(m => m.items.forEach(([id,q]) => { const x=FOODS.find(z=>z.id===id); k+=x.kcal*q; p+=x.p*q; c+=x.c*q; f+=x.f*q; }));
+    return {k:Math.round(k),p:Math.round(p),c:Math.round(c),f:Math.round(f)};
+  }
+  function renderHome(){
+    const t = totals();
+    $("kcalNow").textContent = fmt(t.k);
+    $("kcalGoal").textContent = `of ${fmt(GOAL)} kcal`;
+    $("dialArc").style.strokeDashoffset = 314.16 * (1 - Math.min(t.k/GOAL,1));
+    $("mP").textContent = t.p+" g"; $("mC").textContent = t.c+" g"; $("mF").textContent = t.f+" g";
+    $("mealList").innerHTML = today.map(m => {
+      const kc = Math.round(m.items.reduce((s,[id,q]) => s + FOODS.find(z=>z.id===id).kcal*q, 0));
+      return `<div class="row"><div><b>${m.type}</b><small>${m.time} · ${fmt(kc)} kcal</small></div><span class="tag ${m.alert?"alert":"calm"}">${m.alert?"Alert":"Mindful"}</span></div>`;
+    }).join("") + (today.some(m=>m.type==="Dinner") ? "" : `<div class="row"><div><b>Dinner</b><small>Not started</small></div></div>`);
+    $("startMealBtn").hidden = today.some(m=>m.type==="Dinner");
+    $("bandLine").textContent = `Band BG-26A-000184 · connected · 92% battery`;
+  }
+  $("startMealBtn").addEventListener("click", startMeal);
+
+  // ---------- 3. live meal ----------
+  const ctx = $("chart").getContext("2d");
+  function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function drawChart(){
+    const W=712,H=340,pad=34; ctx.clearRect(0,0,W,H);
+    const d = dinner.samples, thr = THR[settings.sens];
+    ctx.strokeStyle = css("--line"); ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){ const y=pad+(H-2*pad)*i/4; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-10,y); ctx.stroke(); }
+    const xAt = i => pad + (W-pad-10) * (i/Math.max(d.length-1,11));
+    // threshold
+    const yP = v => H-pad - (H-2*pad)*(v/16);
+    ctx.setLineDash([8,6]); ctx.strokeStyle = css("--gold"); ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(pad,yP(thr)); ctx.lineTo(W-10,yP(thr)); ctx.stroke(); ctx.setLineDash([]);
+    // heart rate (scaled 60..110)
+    const yH = v => H-pad - (H-2*pad)*((v-60)/50);
+    const line = (key, yf, col) => { ctx.strokeStyle=col; ctx.lineWidth=4; ctx.lineJoin="round"; ctx.beginPath();
+      d.forEach((s,i)=>{ const x=xAt(i), y=yf(s[key]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke(); };
+    if(d.length){ line("hr", yH, css("--calm")); line("avg", yP, css("--signal")); }
+    ctx.fillStyle = css("--ink-soft"); ctx.font = "20px Atkinson Hyperlegible, sans-serif";
+    ctx.fillText("bites/min", pad, 24); ctx.textAlign="right"; ctx.fillText("30-second windows", W-12, H-8); ctx.textAlign="left";
+  }
+  function startMeal(){
+    setStep(3); show("live");
+    dinner = {id:nextMealId++, start:new Date(), samples:[], alerted:false, alertId:null};
+    log("meals",`INSERT meals (meal_id=${dinner.id}, user_id=1, device_id=1, meal_type='dinner', detection_source='bracelet')`,"simulated");
+    $("thrNote").textContent = `The band alerts when your 2-minute average pace reaches ${THR[settings.sens]} bites/min (sensitivity ${settings.sens}). Change it in Settings.`;
+    $("endMealBtn").hidden = false;
+    // scripted but believable stream: calm start, then speeding up
+    const paceScript = [5,6,6,7,8,8,9,10,11,12,12,12,11,10,9,9];
+    const hrScript   = [74,75,76,77,79,81,83,86,89,92,94,95,94,92,90,89];
+    let i = 0; const t0 = Date.now();
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if(i >= paceScript.length){ clearInterval(timer); return; }
+      const s = {pace: paceScript[i] + (Math.random()<.3?0.5:0), hr: hrScript[i] + Math.round(Math.random()*2)};
+      dinner.samples.push(s); i++;
+      const last = dinner.samples.slice(-4);
+      s.avg = Math.round(10 * last.reduce((a,x)=>a+x.pace,0) / last.length) / 10;
+      s.full = last.length === 4;
+      $("paceVal").textContent = s.avg; $("hrVal").textContent = s.hr;
+      const secs = i*30; $("liveClock").textContent = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}`;
+      $("gPace").classList.toggle("hot", s.full && s.avg >= THR[settings.sens]);
+      drawChart();
+      if(i%2===0) log("sensor_readings",`INSERT sensor_readings (device_id=1, meal_id=${dinner.id}, bite_count=${Math.round(s.pace/2)}, avg_heart_rate=${s.hr})`,"simulated");
+      if(!dinner.alerted && s.full && s.avg >= THR[settings.sens]) fireAlert(s);
+    }, 900);
+    drawChart();
+  }
+  function vibratePattern(){
+    const strength = settings.vibe;
+    const pats = {gentle_pulse:[120+strength*20], double_tap:[90+strength*10,90,90+strength*10], long_buzz:[300+strength*40]};
+    if(navigator.vibrate) navigator.vibrate(pats[settings.pattern]);
+  }
+  function fireAlert(s){
+    dinner.alerted = true; dinner.alertId = nextAlertId++;
+    vibratePattern();
+    if(STUDY.cond === "A"){
+      $("alertText").textContent = "Your band noticed you’re eating faster than usual. No numbers, no judgment — just a gentle nudge to pause and check in with yourself.";
+      $("alertWhy").hidden = true;
+    } else {
+      $("alertWhy").hidden = false;
+      $("alertWhy").textContent = `Why now: over the last 2 minutes you averaged ${s.avg} bites/min — your limit is ${THR[settings.sens]}. Heart rate: ${s.hr} bpm.`;
+    }
+    if(STUDY.on && STUDY.t0 && !STUDY.tAlert) STUDY.tAlert = performance.now();
+    $("alertOv").hidden = false; setStep(4);
+    log("alerts",`INSERT alerts (alert_id=${dinner.alertId}, meal_id=${dinner.id}, trigger_reason='fast_pace', pace_bites_per_min=${s.pace})`,"simulated");
+    log("device_events",`INSERT device_events (event_type='vibration_sent', pattern='${settings.pattern}', strength=${settings.vibe})`,"simulated");
+    $("logFromAlert").focus();
+  }
+  $("dismissAlert").addEventListener("click", () => {
+    $("alertOv").hidden = true;
+    log("alerts",`UPDATE alerts SET user_response='dismissed' WHERE alert_id=${dinner.alertId}`,"simulated");
+    $("endMealBtn").textContent = "Finish and log meal";
+  });
+  $("logFromAlert").addEventListener("click", () => {
+    $("alertOv").hidden = true; clearInterval(timer);
+    log("alerts",`UPDATE alerts SET user_response='logged_meal' WHERE alert_id=${dinner.alertId}`,"simulated");
+    goLog();
+  });
+  $("endMealBtn").addEventListener("click", () => { clearInterval(timer); goLog(); });
+
+  // ---------- 4. log ----------
+  function goLog(){ setStep(5); cart.clear(); $("foodSearch").value=""; renderFoods(""); show("log"); }
+  function renderFoods(q){
+    const list = FOODS.filter(f => f.name.toLowerCase().includes(q.trim().toLowerCase()));
+    $("foodList").innerHTML = list.length ? list.map(f => {
+      const on = cart.has(f.id);
+      return `<div class="food"><div><b>${f.name}</b><small>${f.serv} · ${f.kcal} kcal</small></div><button type="button" class="add${on?" on":""}" data-id="${f.id}" aria-pressed="${on}" aria-label="${on?"Remove":"Add"} ${f.name}">${on?"✓":"+"}</button></div>`;
+    }).join("") : `<p class="empty">No food called “${q.replace(/[<>&]/g,"")}”. Try “rice” or “salmon”.</p>`;
+    const k = [...cart.keys()].reduce((s,id)=>s+FOODS.find(f=>f.id===id).kcal,0);
+    $("saveMealBtn").disabled = cart.size===0;
+    $("saveMealBtn").textContent = cart.size ? `Save meal · ${cart.size} item${cart.size>1?"s":""} · ${k} kcal` : "Save meal";
+  }
+  $("foodSearch").addEventListener("input", e => {
+    renderFoods(e.target.value);
+  });
+  $("foodList").addEventListener("click", e => {
+    const b = e.target.closest(".add"); if(!b) return;
+    const id = +b.dataset.id; cart.has(id) ? cart.delete(id) : cart.set(id,1);
+    renderFoods($("foodSearch").value);
+  });
+  $("saveMealBtn").addEventListener("click", () => {
+    const items = [...cart.keys()].map(id => [id,1]);
+    const mins = Math.max(1, Math.round(dinner.samples.length*30/60));
+    today.push({id:dinner.id,type:"Dinner",time:`19:20–19:${String(20+mins).padStart(2,"0")}`,items,alert:dinner.alerted});
+    week.Wed[dinner.alerted?1:0] += 1;
+    items.forEach(([id]) => log("meal_items",`INSERT meal_items (meal_id=${dinner.id}, food_id=${id}, servings=1)`,"simulated"));
+    log("meals",`UPDATE meals SET ended_at=now() WHERE meal_id=${dinner.id}`,"simulated");
+    const k = Math.round(items.reduce((s,[id])=>s+FOODS.find(f=>f.id===id).kcal,0));
+    const t = totals();
+    $("doneLine").textContent = dinner.alerted ? "Your band caught a fast pace and you slowed down. That counts." : "No alert this time — a mindful meal.";
+    $("doneSummary").innerHTML = `<div><b>${k}</b><span>kcal this meal</span></div><div><b>${fmt(t.k)}</b><span>of ${fmt(GOAL)} today</span></div><div><b>${dinner.alerted?1:0}</b><span>alert${dinner.alerted?"":"s"}</span></div>`;
+    setStep(6); show("done");
+    if(STUDY.on && STUDY.t0 && !STUDY.tSaved){
+      STUDY.tSaved = performance.now();
+      STUDY.foodsOk = cart.has(6) && cart.has(3) ? 1 : 0;
+      STUDY.nFoods = cart.size;
+      setTimeout(openQuestions, 1600);
+    }
+  });
+  $("toInsights").addEventListener("click", () => show("insights"));
+  $("toHome").addEventListener("click", () => show("home"));
+
+  // ---------- insights ----------
+  function renderInsights(){
+    const days = Object.keys(week); let m=0,a=0;
+    days.forEach(d => { m+=week[d][0]; a+=week[d][1]; });
+    const total = m+a, pct = total? Math.round(100*m/total):0;
+    $("mindfulPct").textContent = pct+"%";
+    $("mindfulLine").textContent = `${m} of ${total} meals this week had no alert.`;
+    const max = Math.max(3, ...days.map(d=>week[d][0]+week[d][1]));
+    $("bars").innerHTML = days.map(d => {
+      const [mm,aa] = week[d]; const h = 100*(mm+aa)/max;
+      return `<div class="col"><span class="lbl">${mm+aa||""}</span><div class="stack" style="height:${h}%">
+        <i style="height:${mm+aa? 100*mm/(mm+aa):0}%;background:var(--calm)"></i><i style="height:${mm+aa? 100*aa/(mm+aa):0}%;background:var(--signal)"></i></div></div>`;
+    }).join("");
+    $("barsX").innerHTML = days.map(d=>`<span>${d}</span>`).join("");
+    $("insightText").innerHTML = `<b>Pattern:</b> both alerts this week came at lunch or dinner, after the first 3 minutes of the meal. Try a glass of water before you start.`;
+  }
+
+  // ---------- settings ----------
+  $("sens").addEventListener("input", e => { settings.sens = +e.target.value; $("sensVal").textContent = settings.sens; });
+  $("vibe").addEventListener("input", e => { settings.vibe = +e.target.value; $("vibeVal").textContent = settings.vibe; });
+  $("pattern").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    settings.pattern = b.dataset.p;
+    $("pattern").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x===b));
+  });
+  $("testVibe").addEventListener("click", () => {
+    vibratePattern();
+    $("testVibe").textContent = navigator.vibrate ? "Vibration sent" : "Vibration shown (this device can’t vibrate)";
+    setTimeout(()=>$("testVibe").textContent="Test vibration",1800);
+  });
+  $("saveSettings").addEventListener("click", () => {
+    log("device_settings",`UPDATE device_settings SET sensitivity_level=${settings.sens}, vibration_strength=${settings.vibe}, vibration_pattern='${settings.pattern}' WHERE device_id=1`,"simulated");
+    $("saveSettings").textContent = "Settings saved";
+    setTimeout(()=>$("saveSettings").textContent="Save settings",1600);
+  });
+
+  // ---------- restart / theme ----------
+  $("restart").addEventListener("click", () => location.reload());
+  const themeBtn = $("themeBtn");
+  function applyTheme(t){ document.documentElement.setAttribute("data-theme", t); themeBtn.textContent = t==="dark" ? "Light mode" : "Dark mode"; if(dinner) drawChart(); }
+  const prefersDark = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches;
+  let theme = prefersDark ? "dark" : "light";
+  try { const saved = localStorage.getItem("bg-theme"); if(saved) theme = saved; } catch(e){}
+  applyTheme(theme);
+  themeBtn.addEventListener("click", () => { theme = theme==="dark"?"light":"dark"; applyTheme(theme); try{localStorage.setItem("bg-theme",theme);}catch(e){} });
+
+  // ================= STUDY MODE =================
+  const STUDY = { on: location.hash === "#study", cond: "B", t0: 0, tAlert: 0, tSaved: 0, taps: 0, stuck: 0, foodsOk: 0, nFoods: 0 };
+  const SUS = [
+    "I think that I would like to use this app frequently.",
+    "I found the app unnecessarily complex.",
+    "I thought the app was easy to use.",
+    "I think that I would need the support of a technical person to be able to use this app.",
+    "I found the various functions in this app were well integrated.",
+    "I thought there was too much inconsistency in this app.",
+    "I would imagine that most people would learn to use this app very quickly.",
+    "I found the app very cumbersome to use.",
+    "I felt very confident using the app.",
+    "I needed to learn a lot of things before I could get going with this app."
+  ];
+  const EXTRA = [
+    ["u", "I understood why the band vibrated."],
+    ["t", "I would trust this alert in real life."],
+    ["w", "I would wear a band like this during my meals."]
+  ];
+  function likert(name, text){
+    let h = `<fieldset class="q"><legend>${text}</legend><div class="lik">`;
+    for(let v=1; v<=5; v++) h += `<label><input type="radio" name="${name}" value="${v}">${v}</label>`;
+    return h + `</div><div class="ends"><span>Strongly disagree</span><span>Strongly agree</span></div></fieldset>`;
+  }
+  function openQuestions(){
+    const parts = [];
+    parts.push(`<fieldset class="q mc"><legend>Why do you think the band vibrated during dinner?</legend>
+      <label><input type="radio" name="why" value="pace">I was eating faster than my set limit</label>
+      <label><input type="radio" name="why" value="kcal">I went over my daily calorie goal</label>
+      <label><input type="radio" name="why" value="hr">My heart rate was dangerously high</label>
+      <label><input type="radio" name="why" value="dk">I don’t know</label></fieldset>`);
+    EXTRA.forEach(([k,t]) => parts.push(likert("x_"+k, t)));
+    SUS.forEach((t,i) => parts.push(likert("s"+i, t)));
+    $("qList").innerHTML = parts.join("");
+    document.querySelectorAll(".smodal").forEach(m => m.hidden = true);
+    $("mQ").hidden = false; $("mQ").scrollTop = 0;
+  }
+  function val(name){ const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : null; }
+  function b64url(str){ return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+  if(STUDY.on){
+    document.body.classList.add("study");
+    STUDY.cond = Math.random() < 0.5 ? "A" : "B";
+    $("mConsent").hidden = false;
+    $("consentNo").addEventListener("click", () => { $("mConsent").querySelector(".box").innerHTML = "<h2>No problem — thank you anyway.</h2><p>You can close this page.</p>"; });
+    $("consentYes").addEventListener("click", () => {
+      if(!$("age").value || !$("exp").value){ $("cErr").textContent = "Please choose both answers to continue."; return; }
+      $("mConsent").hidden = true; $("mTask").hidden = false;
+    });
+    $("taskGo").addEventListener("click", () => {
+      $("mTask").hidden = true; STUDY.t0 = performance.now();
+      document.querySelector(".phone").addEventListener("click", e => { if(e.target.closest("button,input,label,[role=button]")) STUDY.taps++; }, true);
+    });
+    $("stuckBtn").addEventListener("click", () => { if(!STUDY.t0 || STUDY.tSaved) return; STUDY.stuck = 1; STUDY.tSaved = performance.now(); clearInterval(timer); openQuestions(); });
+    $("qDone").addEventListener("click", () => {
+      const why = val("why"); const x = EXTRA.map(([k]) => val("x_"+k)); const sus = SUS.map((_,i) => val("s"+i));
+      if(!why || x.includes(null) || sus.includes(null)){ $("qErr").textContent = "Please answer every question (the comment is optional)."; return; }
+      const r = {
+        v: 1, c: STUDY.cond, age: $("age").value, exp: $("exp").value,
+        dev: matchMedia("(max-width: 900px)").matches ? "phone" : "laptop",
+        ok: STUDY.stuck ? 0 : 1, fo: STUDY.foodsOk, nf: STUDY.nFoods,
+        tt: Math.round((STUDY.tSaved - STUDY.t0)/100)/10,
+        ta: STUDY.tAlert ? Math.round((STUDY.tSaved - STUDY.tAlert)/100)/10 : null,
+        tp: STUDY.taps, why, u:+x[0], tr:+x[1], w:+x[2], sus: sus.map(Number).join(""),
+        cm: $("cmt").value.trim().slice(0,300)
+      };
+      $("codeBox").textContent = "BG1-" + b64url(JSON.stringify(r));
+      $("mQ").hidden = true; $("mCode").hidden = false;
+    });
+    $("copyCode").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText($("codeBox").textContent); $("copyCode").textContent = "Copied ✓"; }
+      catch(e){ const r = document.createRange(); r.selectNodeContents($("codeBox")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $("copyCode").textContent = "Selected — press Copy"; }
+    });
+  }
+
+  setStep(1);
+})();
+</script>
+</body>
+</html>
